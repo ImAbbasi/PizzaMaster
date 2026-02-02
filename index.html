@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Pro Logistics Tracker | Fleet Management</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+
+<style>
+:root {
+  --primary: #111827;
+  --accent: #f97316;
+  --danger: #ef4444;
+  --success: #22c55e;
+  --bg: #f3f4f6;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: #111;
+}
+
+/* Header with your Logo */
+.header {
+  background: var(--primary);
+  color: white;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-size: 18px;
+  font-weight: 600;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+}
+
+.header img {
+  height: 35px; /* Adjust height for your logo */
+  width: auto;
+}
+
+/* Login Card Branding */
+.brand-container {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.brand-logo {
+  max-width: 160px; /* Perfect size for your logo */
+  height: auto;
+  margin: 0 auto 10px auto;
+  display: block;
+}
+
+.card {
+  background: white;
+  margin: 16px;
+  padding: 25px;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+input {
+  width: 100%;
+  padding: 14px;
+  font-size: 16px;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+  outline: none;
+  margin-top: 10px;
+  transition: border 0.3s;
+}
+
+input:focus { border-color: var(--accent); }
+
+button {
+  width: 100%;
+  padding: 15px;
+  font-size: 16px;
+  border-radius: 12px;
+  border: none;
+  margin-top: 12px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: 0.2s;
+}
+
+button:active { transform: scale(0.98); }
+
+.btn-primary { background: var(--accent); color: white; }
+.btn-danger { background: var(--danger); color: white; }
+.btn-dark { background: var(--primary); color: white; }
+
+.btn-call { 
+    background: var(--success); 
+    color: white; 
+    padding: 12px; 
+    text-decoration: none; 
+    display: block; 
+    text-align: center; 
+    border-radius: 10px;
+    margin-top: 10px;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+#map {
+  height: 65vh;
+  border-radius: 20px;
+  margin: 16px;
+  border: 4px solid white;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.status-badge {
+  font-size: 13px;
+  color: #666;
+  text-align: center;
+  margin-top: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<div id="login">
+  <div class="header">
+    <img src="https://raw.githubusercontent.com/ImAbbasi/my-assets/main/logo.png" alt="Logo">
+    <span>Logistics Dashboard</span>
+  </div>
+  
+  <div class="card">
+    <div class="brand-container">
+        <img src="https://raw.githubusercontent.com/ImAbbasi/my-assets/main/logo.png" class="brand-logo" alt="Main Logo">
+        <h3 style="margin-top:0;">Rider Portal</h3>
+    </div>
+    
+    <input id="riderName" placeholder="Enter Full Name">
+    <input id="riderPhone" type="tel" placeholder="Enter Phone Number">
+    <button class="btn-primary" onclick="loginRider()">LOGIN AS RIDER</button>
+    
+    <div style="text-align:center; margin: 15px 0; color:#888;">— OR —</div>
+    <button class="btn-dark" onclick="showAdminLogin()">ADMIN MANAGEMENT</button>
+  </div>
+</div>
+
+<div id="adminLogin" style="display:none;">
+  <div class="header">
+    <img src="https://raw.githubusercontent.com/ImAbbasi/my-assets/main/logo.png" alt="Logo">
+    <span>Admin Secure Entry</span>
+  </div>
+  <div class="card">
+    <input id="adminPass" type="password" placeholder="Admin Password">
+    <button class="btn-primary" onclick="loginAdmin()">VERIFY ACCESS</button>
+    <button style="background:none; color:var(--primary); font-size:14px;" onclick="location.reload()">Back to Home</button>
+  </div>
+</div>
+
+<div id="rider" style="display:none;">
+  <div class="header">
+    <img src="https://raw.githubusercontent.com/ImAbbasi/my-assets/main/logo.png" alt="Logo">
+    <span>Live Broadcasting</span>
+  </div>
+  <div class="card">
+    <h3 id="welcome" style="margin-top:0;"></h3>
+    <button class="btn-primary" id="trackBtn" onclick="startTracking()">START BROADCASTING</button>
+    <button class="btn-danger" onclick="logoutRider()">STOP & LOGOUT</button>
+    <div class="status-badge">App must stay open for live tracking</div>
+  </div>
+</div>
+
+<div id="admin" style="display:none;">
+  <div class="header">
+    <img src="https://raw.githubusercontent.com/ImAbbasi/my-assets/main/logo.png" alt="Logo">
+    <span>Fleet Monitor</span>
+  </div>
+  <div class="card">
+    <div id="riderCount" style="font-weight: 700; color: var(--accent); margin-bottom:10px;">Active Riders: 0</div>
+    <button class="btn-dark" onclick="centerHQ()">📍 SNAP TO HQ</button>
+    <button class="btn-danger" onclick="logoutAdmin()">ADMIN LOGOUT</button>
+  </div>
+</div>
+
+<div id="mapWrapper" style="display:none;">
+  <div id="map"></div>
+</div>
+
+<script>
+// --- CONFIGURATION ---
+const firebaseConfig = {
+  databaseURL: "https://mytrackingapp-d1ad8-default-rtdb.asia-southeast1.firebasedatabase.app/"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+const HQ = [29.5298, 71.6319]; // Bahawalpur HQ
+let riderId = "";
+let watchId = null;
+let markers = {};
+let routes = {};
+let routePoints = {};
+const riderColors = {};
+const colorPalette = ["#f97316", "#22c55e", "#3b82f6", "#ef4444", "#a855f7", "#14b8a6", "#eab308"];
+
+// --- MAP INIT ---
+let map = L.map('map').setView(HQ, 13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+L.marker(HQ).addTo(map).bindTooltip("<b>🏠 MAIN HQ</b>", { permanent: true, direction: "top" });
+
+function getRiderColor(id) {
+  if (!riderColors[id]) {
+    const index = Object.keys(riderColors).length % colorPalette.length;
+    riderColors[id] = colorPalette[index];
+  }
+  return riderColors[id];
+}
+
+function show(id) {
+  ["login","adminLogin","rider","admin"].forEach(s => document.getElementById(s).style.display = "none");
+  document.getElementById(id).style.display = "block";
+}
+
+/* ---------- RIDER ACTIONS ---------- */
+function loginRider() {
+  const name = document.getElementById("riderName").value.trim();
+  const phone = document.getElementById("riderPhone").value.trim();
+  if (!name || !phone) return alert("Missing Details");
+  
+  riderId = name.replace(/\s/g,'_') + "_" + Date.now();
+  document.getElementById("welcome").innerText = "Hi, " + name;
+  document.getElementById("mapWrapper").style.display = "block";	
+  show("rider");
+  setTimeout(() => { map.invalidateSize(); }, 300);
+}
+
+async function startTracking() {
+  if (watchId) return;
+  document.getElementById("trackBtn").innerText = "📡 ON AIR...";
+  document.getElementById("trackBtn").style.background = "#22c55e";
+
+  let batteryLevel = "N/A";
+  try {
+    const battery = await navigator.getBattery();
+    batteryLevel = Math.floor(battery.level * 100) + "%";
+  } catch (e) {}
+
+  watchId = navigator.geolocation.watchPosition(
+    pos => {
+      const speedKmH = pos.coords.speed ? (pos.coords.speed * 3.6).toFixed(1) : 0;
+      db.ref("riders/" + riderId).set({
+        name: document.getElementById("riderName").value,
+        phone: document.getElementById("riderPhone").value,
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+        speed: speedKmH,
+        battery: batteryLevel,
+        time: Date.now()
+      });
+    },
+    err => { alert("Please enable Location/GPS"); },
+    { enableHighAccuracy: true }
+  );
+}
+
+/* ---------- ADMIN ACTIONS ---------- */
+function showAdminLogin() { show("adminLogin"); }
+function loginAdmin() {
+  if (document.getElementById("adminPass").value !== "1234") return alert("Denied");
+  document.getElementById("mapWrapper").style.display = "block";
+  show("admin");
+  loadAdminMap();
+  setTimeout(() => { map.invalidateSize(); }, 300);
+}
+
+function loadAdminMap() {
+  db.ref("riders").on("value", snap => {
+    const data = snap.val();
+    const now = Date.now();
+    let activeMarkers = [];
+    let activeCount = 0;
+
+    if (!data) {
+      document.getElementById("riderCount").innerText = "Active Riders: 0";
+      return;
+    }
+
+    for (let id in data) {
+      const r = data[id];
+      const isOnline = (now - r.time) < 60000; // Online if updated in last 60s
+
+      if (isOnline) {
+        const color = getRiderColor(id);
+        const dist = getDistanceKm(HQ[0], HQ[1], r.lat, r.lng);
+
+        if (!markers[id]) {
+          const icon = L.divIcon({
+            className: "rider-marker",
+            html: `<div style="background:${color}; width:20px; height:20px; border-radius:50%; border:3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.4);"></div>`
+          });
+          markers[id] = L.marker([r.lat, r.lng], { icon }).addTo(map);
+        } else {
+          markers[id].setLatLng([r.lat, r.lng]);
+        }
+
+        markers[id].bindTooltip(`<b>${r.name}</b>`, { permanent: true, direction: "top", offset: [0, -10] });
+
+        // POPUP WITH CALL BUTTON
+        const popupContent = `
+            <div style="min-width:150px; font-size:14px;">
+                <b style="color:${color}; font-size:16px;">${r.name}</b><br>
+                📍 ${dist} km from HQ<br>
+                🚀 ${r.speed} km/h | 🔋 ${r.battery}<br>
+                <a href="tel:${r.phone}" class="btn-call">📞 CALL NOW</a>
+            </div>
+        `;
+        markers[id].bindPopup(popupContent);
+
+        activeMarkers.push(markers[id]);
+        activeCount++;
+      } else {
+        if (markers[id]) { map.removeLayer(markers[id]); delete markers[id]; }
+        db.ref("riders/" + id).remove();
+      }
+    }
+    document.getElementById("riderCount").innerText = "Active Riders: " + activeCount;
+    if (activeMarkers.length > 0) {
+      const group = L.featureGroup(activeMarkers);
+      map.fitBounds(group.getBounds(), { padding: [50, 50] });
+    }
+  });
+}
+
+function logoutRider() {
+  if (watchId) navigator.geolocation.clearWatch(watchId);
+  if (riderId) db.ref("riders/" + riderId).remove();
+  location.reload(); 
+}
+function logoutAdmin() { location.reload(); }
+function centerHQ() { map.setView(HQ, 15); }
+
+function getDistanceKm(lat1, lon1, lat2, lon2) {
+  const R = 6371; 
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return (R * c).toFixed(2);
+}
+</script>
+</body>
+</html>
