@@ -1,359 +1,189 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Pro Logistics Tracker | Fleet Management</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pizza Master PRO</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        :root { --primary: #111827; --accent: #f37021; --success: #22c55e; }
+        body, html { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; height: 100%; background: #f3f4f6; overflow: hidden; }
+        
+        header { 
+            background: var(--primary); color: white; padding: 10px 15px; 
+            display: flex; justify-content: space-between; align-items: center; 
+            border-bottom: 3px solid var(--accent); z-index: 2000; position: relative;
+        }
 
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
-
-<style>
-:root {
-  --primary: #111827;
-  --accent: #f97316;
-  --danger: #ef4444;
-  --success: #22c55e;
-  --bg: #f3f4f6;
-}
-
-* { box-sizing: border-box; }
-
-body {
-  margin: 0;
-  font-family: system-ui, -apple-system, sans-serif;
-  background: var(--bg);
-  color: #111;
-}
-
-/* Header with your Logo */
-.header {
-  background: var(--primary);
-  color: white;
-  padding: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  font-size: 18px;
-  font-weight: 600;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-}
-
-.header img {
-  height: 35px; /* Adjust height for your logo */
-  width: auto;
-}
-
-/* Login Card Branding */
-.brand-container {
-  text-align: center;
-  margin-bottom: 20px;
-}
-
-.brand-logo {
-  max-width: 160px; /* Perfect size for your logo */
-  height: auto;
-  margin: 0 auto 10px auto;
-  display: block;
-}
-
-.card {
-  background: white;
-  margin: 16px;
-  padding: 25px;
-  border-radius: 16px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-}
-
-input {
-  width: 100%;
-  padding: 14px;
-  font-size: 16px;
-  border-radius: 10px;
-  border: 1px solid #ddd;
-  outline: none;
-  margin-top: 10px;
-  transition: border 0.3s;
-}
-
-input:focus { border-color: var(--accent); }
-
-button {
-  width: 100%;
-  padding: 15px;
-  font-size: 16px;
-  border-radius: 12px;
-  border: none;
-  margin-top: 12px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: 0.2s;
-}
-
-button:active { transform: scale(0.98); }
-
-.btn-primary { background: var(--accent); color: white; }
-.btn-danger { background: var(--danger); color: white; }
-.btn-dark { background: var(--primary); color: white; }
-
-.btn-call { 
-    background: var(--success); 
-    color: white; 
-    padding: 12px; 
-    text-decoration: none; 
-    display: block; 
-    text-align: center; 
-    border-radius: 10px;
-    margin-top: 10px;
-    font-weight: bold;
-    font-size: 14px;
-}
-
-#map {
-  height: 65vh;
-  border-radius: 20px;
-  margin: 16px;
-  border: 4px solid white;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-}
-
-.status-badge {
-  font-size: 13px;
-  color: #666;
-  text-align: center;
-  margin-top: 10px;
-}
-</style>
+        .screen { display: none; height: calc(100vh - 55px); width: 100vw; position: relative; }
+        .active { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        
+        .card { 
+            background: white; padding: 25px; border-radius: 20px; 
+            width: 85%; max-width: 350px; text-align: center; 
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15); border: 1px solid #e5e7eb;
+        }
+        
+        input { 
+            width: 100%; padding: 15px; border: 2px solid #d1d5db; border-radius: 12px; 
+            margin-top: 12px; font-size: 16px; outline: none; box-sizing: border-box;
+            background: #ffffff; color: #111827; font-weight: 600;
+        }
+        
+        .btn { width: 100%; padding: 16px; border-radius: 50px; border: none; font-weight: bold; font-size: 16px; margin-top: 20px; cursor: pointer; }
+        .btn-primary { background: var(--accent); color: white; }
+        
+        /* Map Layout */
+        #map { height: 100%; width: 100%; z-index: 1; }
+        #admin-panel { 
+            position: absolute; top: 10px; left: 10px; z-index: 1000; 
+            background: rgba(255,255,255,0.95); padding: 15px; border-radius: 15px; 
+            width: 240px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); font-size: 12px;
+            max-height: 70vh; overflow-y: auto;
+        }
+        
+        .rider-item { border-bottom: 1px solid #eee; padding: 10px 0; text-align: left; }
+        .stat-badge { background: #fff7ed; color: #f37021; padding: 3px 7px; border-radius: 5px; font-weight: bold; font-size: 10px; display: inline-block; margin: 2px; border: 1px solid #ffedd5; }
+        .btn-wa { background: #25D366; color: white; padding: 8px; border-radius: 8px; display: block; text-align: center; text-decoration: none; margin-top: 5px; font-weight: bold; }
+    </style>
 </head>
-
 <body>
 
-<div id="login">
-  <div class="header">
-    <img src="https://raw.githubusercontent.com/ImAbbasi/my-assets/main/logo.png" alt="Logo">
-    <span>Logistics Dashboard</span>
-  </div>
-  
-  <div class="card">
-    <div class="brand-container">
-        <img src="https://raw.githubusercontent.com/ImAbbasi/my-assets/main/logo.png" class="brand-logo" alt="Main Logo">
-        <h3 style="margin-top:0;">Rider Portal</h3>
+<header>
+    <div style="display: flex; align-items: center;">
+        <img src="https://raw.githubusercontent.com/ImAbbasi/my-assets/main/logo.png" style="height:30px; margin-right:8px;">
+        <div style="font-weight:bold;">PIZZA <span style="color:var(--accent)">MASTER</span></div>
     </div>
-    
-    <input id="riderName" placeholder="Enter Full Name">
-    <input id="riderPhone" type="tel" placeholder="Enter Phone Number">
-    <button class="btn-primary" onclick="loginRider()">LOGIN AS RIDER</button>
-    
-    <div style="text-align:center; margin: 15px 0; color:#888;">— OR —</div>
-    <button class="btn-dark" onclick="showAdminLogin()">ADMIN MANAGEMENT</button>
-  </div>
+</header>
+
+<div id="screen-start" class="screen active">
+    <div class="card">
+        <img src="https://raw.githubusercontent.com/ImAbbasi/my-assets/main/logo.png" style="width:80px; margin-bottom:10px;">
+        <h2 style="margin:0;">Rider Portal</h2>
+        <input type="text" id="riderName" placeholder="Full Name">
+        <input type="tel" id="riderPhone" placeholder="WhatsApp Number">
+        <button class="btn btn-primary" onclick="startTracking()">START SHIFT</button>
+        <button onclick="showScreen('screen-admin-login')" style="margin-top:20px; border:none; background:none; color:#6b7280; text-decoration:underline;">Admin Login</button>
+    </div>
 </div>
 
-<div id="adminLogin" style="display:none;">
-  <div class="header">
-    <img src="https://raw.githubusercontent.com/ImAbbasi/my-assets/main/logo.png" alt="Logo">
-    <span>Admin Secure Entry</span>
-  </div>
-  <div class="card">
-    <input id="adminPass" type="password" placeholder="Admin Password">
-    <button class="btn-primary" onclick="loginAdmin()">VERIFY ACCESS</button>
-    <button style="background:none; color:var(--primary); font-size:14px;" onclick="location.reload()">Back to Home</button>
-  </div>
+<div id="screen-admin-login" class="screen">
+    <div class="card">
+        <h3>Admin Access</h3>
+        <input type="password" id="adminPass" placeholder="Password">
+        <button class="btn btn-primary" onclick="adminAuth()">VERIFY</button>
+        <button onclick="showScreen('screen-start')" style="margin-top:15px; border:none; background:none; color:#999;">Cancel</button>
+    </div>
 </div>
 
-<div id="rider" style="display:none;">
-  <div class="header">
-    <img src="https://raw.githubusercontent.com/ImAbbasi/my-assets/main/logo.png" alt="Logo">
-    <span>Live Broadcasting</span>
-  </div>
-  <div class="card">
-    <h3 id="welcome" style="margin-top:0;"></h3>
-    <button class="btn-primary" id="trackBtn" onclick="startTracking()">START BROADCASTING</button>
-    <button class="btn-danger" onclick="logoutRider()">STOP & LOGOUT</button>
-    <div class="status-badge">App must stay open for live tracking</div>
-  </div>
+<div id="screen-rider-active" class="screen">
+    <div class="card">
+        <h1 id="activeNameDisplay"></h1>
+        <div style="font-size: 60px; margin: 10px;">🍕</div>
+        <p><b style="color: var(--success);">LIVE TRACKING ON</b></p>
+        <div id="myStats" style="font-size: 14px; text-align: left; background: #fff7ed; padding: 15px; border-radius: 12px;">
+            Initializing GPS...
+        </div>
+        <button onclick="location.reload()" class="btn" style="background:#fee2e2; color:#b91c1c;">END SHIFT</button>
+    </div>
 </div>
 
-<div id="admin" style="display:none;">
-  <div class="header">
-    <img src="https://raw.githubusercontent.com/ImAbbasi/my-assets/main/logo.png" alt="Logo">
-    <span>Fleet Monitor</span>
-  </div>
-  <div class="card">
-    <div id="riderCount" style="font-weight: 700; color: var(--accent); margin-bottom:10px;">Active Riders: 0</div>
-    <button class="btn-dark" onclick="centerHQ()">📍 SNAP TO HQ</button>
-    <button class="btn-danger" onclick="logoutAdmin()">ADMIN LOGOUT</button>
-  </div>
-</div>
-
-<div id="mapWrapper" style="display:none;">
-  <div id="map"></div>
+<div id="screen-admin-map" class="screen" style="display:none;">
+    <div id="admin-panel">
+        <b style="color:var(--accent);">FLEET MONITOR</b><hr>
+        <div id="rider-list">Searching for riders...</div>
+        <button class="btn" style="background:var(--primary); color:white; padding:10px; font-size:12px;" onclick="location.reload()">LOGOUT</button>
+    </div>
+    <div id="map"></div>
 </div>
 
 <script>
-// --- CONFIGURATION ---
-const firebaseConfig = {
-  databaseURL: "https://mytrackingapp-d1ad8-default-rtdb.asia-southeast1.firebasedatabase.app/"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+    const firebaseConfig = { databaseURL: "https://ovenx-tracking-default-rtdb.asia-southeast1.firebasedatabase.app/" };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const HQ = [29.5298, 71.6319]; 
+    let map, markers = {};
 
-const HQ = [29.5298, 71.6319]; // Bahawalpur HQ
-let riderId = "";
-let watchId = null;
-let markers = {};
-let routes = {};
-let routePoints = {};
-const riderColors = {};
-const colorPalette = ["#f97316", "#22c55e", "#3b82f6", "#ef4444", "#a855f7", "#14b8a6", "#eab308"];
-
-// --- MAP INIT ---
-let map = L.map('map').setView(HQ, 13);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-L.marker(HQ).addTo(map).bindTooltip("<b>🏠 MAIN HQ</b>", { permanent: true, direction: "top" });
-
-function getRiderColor(id) {
-  if (!riderColors[id]) {
-    const index = Object.keys(riderColors).length % colorPalette.length;
-    riderColors[id] = colorPalette[index];
-  }
-  return riderColors[id];
-}
-
-function show(id) {
-  ["login","adminLogin","rider","admin"].forEach(s => document.getElementById(s).style.display = "none");
-  document.getElementById(id).style.display = "block";
-}
-
-/* ---------- RIDER ACTIONS ---------- */
-function loginRider() {
-  const name = document.getElementById("riderName").value.trim();
-  const phone = document.getElementById("riderPhone").value.trim();
-  if (!name || !phone) return alert("Missing Details");
-  
-  riderId = name.replace(/\s/g,'_') + "_" + Date.now();
-  document.getElementById("welcome").innerText = "Hi, " + name;
-  document.getElementById("mapWrapper").style.display = "block";	
-  show("rider");
-  setTimeout(() => { map.invalidateSize(); }, 300);
-}
-
-async function startTracking() {
-  if (watchId) return;
-  document.getElementById("trackBtn").innerText = "📡 ON AIR...";
-  document.getElementById("trackBtn").style.background = "#22c55e";
-
-  let batteryLevel = "N/A";
-  try {
-    const battery = await navigator.getBattery();
-    batteryLevel = Math.floor(battery.level * 100) + "%";
-  } catch (e) {}
-
-  watchId = navigator.geolocation.watchPosition(
-    pos => {
-      const speedKmH = pos.coords.speed ? (pos.coords.speed * 3.6).toFixed(1) : 0;
-      db.ref("riders/" + riderId).set({
-        name: document.getElementById("riderName").value,
-        phone: document.getElementById("riderPhone").value,
-        lat: pos.coords.latitude,
-        lng: pos.coords.longitude,
-        speed: speedKmH,
-        battery: batteryLevel,
-        time: Date.now()
-      });
-    },
-    err => { alert("Please enable Location/GPS"); },
-    { enableHighAccuracy: true }
-  );
-}
-
-/* ---------- ADMIN ACTIONS ---------- */
-function showAdminLogin() { show("adminLogin"); }
-function loginAdmin() {
-  if (document.getElementById("adminPass").value !== "1234") return alert("Denied");
-  document.getElementById("mapWrapper").style.display = "block";
-  show("admin");
-  loadAdminMap();
-  setTimeout(() => { map.invalidateSize(); }, 300);
-}
-
-function loadAdminMap() {
-  db.ref("riders").on("value", snap => {
-    const data = snap.val();
-    const now = Date.now();
-    let activeMarkers = [];
-    let activeCount = 0;
-
-    if (!data) {
-      document.getElementById("riderCount").innerText = "Active Riders: 0";
-      return;
-    }
-
-    for (let id in data) {
-      const r = data[id];
-      const isOnline = (now - r.time) < 60000; // Online if updated in last 60s
-
-      if (isOnline) {
-        const color = getRiderColor(id);
-        const dist = getDistanceKm(HQ[0], HQ[1], r.lat, r.lng);
-
-        if (!markers[id]) {
-          const icon = L.divIcon({
-            className: "rider-marker",
-            html: `<div style="background:${color}; width:20px; height:20px; border-radius:50%; border:3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.4);"></div>`
-          });
-          markers[id] = L.marker([r.lat, r.lng], { icon }).addTo(map);
-        } else {
-          markers[id].setLatLng([r.lat, r.lng]);
+    function showScreen(id) {
+        document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
+        const target = document.getElementById(id);
+        target.style.display = (id === 'screen-admin-map') ? 'block' : 'flex';
+        if(id === 'screen-admin-map') {
+            setTimeout(() => { initAdminMap(); }, 300);
         }
-
-        markers[id].bindTooltip(`<b>${r.name}</b>`, { permanent: true, direction: "top", offset: [0, -10] });
-
-        // POPUP WITH CALL BUTTON
-        const popupContent = `
-            <div style="min-width:150px; font-size:14px;">
-                <b style="color:${color}; font-size:16px;">${r.name}</b><br>
-                📍 ${dist} km from HQ<br>
-                🚀 ${r.speed} km/h | 🔋 ${r.battery}<br>
-                <a href="tel:${r.phone}" class="btn-call">📞 CALL NOW</a>
-            </div>
-        `;
-        markers[id].bindPopup(popupContent);
-
-        activeMarkers.push(markers[id]);
-        activeCount++;
-      } else {
-        if (markers[id]) { map.removeLayer(markers[id]); delete markers[id]; }
-        db.ref("riders/" + id).remove();
-      }
     }
-    document.getElementById("riderCount").innerText = "Active Riders: " + activeCount;
-    if (activeMarkers.length > 0) {
-      const group = L.featureGroup(activeMarkers);
-      map.fitBounds(group.getBounds(), { padding: [50, 50] });
+
+    function adminAuth() {
+        if(document.getElementById('adminPass').value === '1234') {
+            showScreen('screen-admin-map');
+        } else { alert("Wrong Password"); }
     }
-  });
-}
 
-function logoutRider() {
-  if (watchId) navigator.geolocation.clearWatch(watchId);
-  if (riderId) db.ref("riders/" + riderId).remove();
-  location.reload(); 
-}
-function logoutAdmin() { location.reload(); }
-function centerHQ() { map.setView(HQ, 15); }
+    function getDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371;
+        const dLat = (lat2-lat1) * Math.PI / 180;
+        const dLon = (lon2-lon1) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+        return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))).toFixed(2);
+    }
 
-function getDistanceKm(lat1, lon1, lat2, lon2) {
-  const R = 6371; 
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return (R * c).toFixed(2);
-}
+    function initAdminMap() {
+        if(map) { map.invalidateSize(); return; }
+        map = L.map('map', { zoomControl: false }).setView(HQ, 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        L.marker(HQ).addTo(map).bindTooltip("HQ", {permanent:true});
+
+        db.ref('riders').on('value', snap => {
+            const data = snap.val();
+            const list = document.getElementById('rider-list');
+            list.innerHTML = '';
+            const now = Date.now();
+
+            for(let id in data) {
+                const r = data[id];
+                if((now - r.t) < 120000) { // Only show active riders (last 2 mins)
+                    const dist = getDistance(HQ[0], HQ[1], r.lat, r.lng);
+                    if(markers[id]) {
+                        markers[id].setLatLng([r.lat, r.lng]);
+                    } else {
+                        markers[id] = L.marker([r.lat, r.lng]).addTo(map).bindTooltip(r.name, {permanent:true});
+                    }
+                    list.innerHTML += `
+                        <div class="rider-item">
+                            <b>${r.name}</b><br>
+                            <span class="stat-badge">📍 ${dist} km</span>
+                            <span class="stat-badge">🚀 ${r.speed || 0} km/h</span>
+                            <a href="https://wa.me/${r.phone}" class="btn-wa">WhatsApp</a>
+                        </div>`;
+                } else {
+                    if(markers[id]) { map.removeLayer(markers[id]); delete markers[id]; }
+                }
+            }
+        });
+    }
+
+    async function startTracking() {
+        const name = document.getElementById('riderName').value;
+        const phone = document.getElementById('riderPhone').value;
+        if(!name || !phone) return alert("Fill all fields");
+        
+        document.getElementById('activeNameDisplay').innerText = name;
+        showScreen('screen-rider-active');
+        
+        navigator.geolocation.watchPosition(pos => {
+            const speed = pos.coords.speed ? Math.floor(pos.coords.speed * 3.6) : 0;
+            db.ref('riders/' + name.replace(/\s/g,'_')).set({
+                name, phone, lat: pos.coords.latitude, lng: pos.coords.longitude,
+                speed, t: Date.now()
+            });
+            document.getElementById('myStats').innerHTML = `🚀 Speed: ${speed} km/h<br>📡 Signal: Strong`;
+        }, null, { enableHighAccuracy: true });
+    }
 </script>
 </body>
-</html> 
+</html>
