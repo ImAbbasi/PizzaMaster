@@ -13,43 +13,17 @@
     <style>
         :root { --primary: #111827; --accent: #f37021; --success: #22c55e; }
         body, html { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; height: 100%; background: #f3f4f6; overflow: hidden; }
-        
-        header { 
-            background: var(--primary); color: white; padding: 10px 15px; 
-            display: flex; justify-content: space-between; align-items: center; 
-            border-bottom: 3px solid var(--accent); z-index: 2000; position: relative;
-        }
-
+        header { background: var(--primary); color: white; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid var(--accent); z-index: 2000; position: relative; }
         .screen { display: none; height: calc(100vh - 55px); width: 100vw; position: relative; }
         .active { display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        
-        .card { 
-            background: white; padding: 25px; border-radius: 20px; 
-            width: 85%; max-width: 350px; text-align: center; 
-            box-shadow: 0 15px 35px rgba(0,0,0,0.15); border: 1px solid #e5e7eb;
-        }
-        
-        input { 
-            width: 100%; padding: 15px; border: 2px solid #d1d5db; border-radius: 12px; 
-            margin-top: 12px; font-size: 16px; outline: none; box-sizing: border-box;
-            background: #ffffff; color: #111827; font-weight: 600;
-        }
-        
+        .card { background: white; padding: 25px; border-radius: 20px; width: 85%; max-width: 350px; text-align: center; box-shadow: 0 15px 35px rgba(0,0,0,0.15); border: 1px solid #e5e7eb; }
+        input { width: 100%; padding: 15px; border: 2px solid #d1d5db; border-radius: 12px; margin-top: 12px; font-size: 16px; outline: none; box-sizing: border-box; font-weight: 600; }
         .btn { width: 100%; padding: 16px; border-radius: 50px; border: none; font-weight: bold; font-size: 16px; margin-top: 20px; cursor: pointer; }
         .btn-primary { background: var(--accent); color: white; }
-        
-        /* Map Layout */
         #map { height: 100%; width: 100%; z-index: 1; }
-        #admin-panel { 
-            position: absolute; top: 10px; left: 10px; z-index: 1000; 
-            background: rgba(255,255,255,0.95); padding: 15px; border-radius: 15px; 
-            width: 240px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); font-size: 12px;
-            max-height: 70vh; overflow-y: auto;
-        }
-        
-        .rider-item { border-bottom: 1px solid #eee; padding: 10px 0; text-align: left; }
-        .stat-badge { background: #fff7ed; color: #f37021; padding: 3px 7px; border-radius: 5px; font-weight: bold; font-size: 10px; display: inline-block; margin: 2px; border: 1px solid #ffedd5; }
-        .btn-wa { background: #25D366; color: white; padding: 8px; border-radius: 8px; display: block; text-align: center; text-decoration: none; margin-top: 5px; font-weight: bold; }
+        #admin-panel { position: absolute; top: 10px; left: 10px; z-index: 1000; background: rgba(255,255,255,0.95); padding: 15px; border-radius: 15px; width: 220px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); font-size: 12px; }
+        .rider-item { border-bottom: 1px solid #eee; padding: 8px 0; }
+        .stat-badge { background: #fff7ed; color: #f37021; padding: 3px 7px; border-radius: 5px; font-weight: bold; font-size: 10px; display: inline-block; margin: 2px; }
     </style>
 </head>
 <body>
@@ -64,7 +38,7 @@
 <div id="screen-start" class="screen active">
     <div class="card">
         <img src="https://raw.githubusercontent.com/ImAbbasi/my-assets/main/logo.png" style="width:80px; margin-bottom:10px;">
-        <h2 style="margin:0;">Rider Portal</h2>
+        <h2>Rider Portal</h2>
         <input type="text" id="riderName" placeholder="Full Name">
         <input type="tel" id="riderPhone" placeholder="WhatsApp Number">
         <button class="btn btn-primary" onclick="startTracking()">START SHIFT</button>
@@ -85,10 +59,8 @@
     <div class="card">
         <h1 id="activeNameDisplay"></h1>
         <div style="font-size: 60px; margin: 10px;">🍕</div>
-        <p><b style="color: var(--success);">LIVE TRACKING ON</b></p>
-        <div id="myStats" style="font-size: 14px; text-align: left; background: #fff7ed; padding: 15px; border-radius: 12px;">
-            Initializing GPS...
-        </div>
+        <p><b style="color: var(--success);">TRACKING ACTIVE</b></p>
+        <div id="myStats" style="font-size: 14px; text-align: left; background: #fff7ed; padding: 15px; border-radius: 12px;">Waiting for movement...</div>
         <button onclick="location.reload()" class="btn" style="background:#fee2e2; color:#b91c1c;">END SHIFT</button>
     </div>
 </div>
@@ -96,40 +68,31 @@
 <div id="screen-admin-map" class="screen" style="display:none;">
     <div id="admin-panel">
         <b style="color:var(--accent);">FLEET MONITOR</b><hr>
-        <div id="rider-list">Searching for riders...</div>
-        <button class="btn" style="background:var(--primary); color:white; padding:10px; font-size:12px;" onclick="location.reload()">LOGOUT</button>
+        <div id="rider-list">Searching...</div>
+        <button class="btn" style="background:var(--primary); color:white; padding:8px; font-size:11px;" onclick="location.reload()">LOGOUT</button>
     </div>
     <div id="map"></div>
 </div>
+
+<audio id="keepAlive" loop playsinline src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA=="></audio>
 
 <script>
     const firebaseConfig = { databaseURL: "https://ovenx-tracking-default-rtdb.asia-southeast1.firebasedatabase.app/" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const HQ = [29.5298, 71.6319]; 
-    let map, markers = {};
+    let map, markers = {}, paths = {}, wakeLock = null;
 
     function showScreen(id) {
         document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
         const target = document.getElementById(id);
         target.style.display = (id === 'screen-admin-map') ? 'block' : 'flex';
-        if(id === 'screen-admin-map') {
-            setTimeout(() => { initAdminMap(); }, 300);
-        }
+        if(id === 'screen-admin-map') setTimeout(() => { initAdminMap(); }, 300);
     }
 
     function adminAuth() {
-        if(document.getElementById('adminPass').value === '1234') {
-            showScreen('screen-admin-map');
-        } else { alert("Wrong Password"); }
-    }
-
-    function getDistance(lat1, lon1, lat2, lon2) {
-        const R = 6371;
-        const dLat = (lat2-lat1) * Math.PI / 180;
-        const dLon = (lon2-lon1) * Math.PI / 180;
-        const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
-        return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))).toFixed(2);
+        if(document.getElementById('adminPass').value === '1234') showScreen('screen-admin-map');
+        else alert("Wrong Password");
     }
 
     function initAdminMap() {
@@ -143,25 +106,21 @@
             const list = document.getElementById('rider-list');
             list.innerHTML = '';
             const now = Date.now();
-
+            
             for(let id in data) {
                 const r = data[id];
-                if((now - r.t) < 3600000) { // Only show active riders (last 60 mins)
-                    const dist = getDistance(HQ[0], HQ[1], r.lat, r.lng);
-                    if(markers[id]) {
-                        markers[id].setLatLng([r.lat, r.lng]);
-                    } else {
-                        markers[id] = L.marker([r.lat, r.lng]).addTo(map).bindTooltip(r.name, {permanent:true});
-                    }
-                    list.innerHTML += `
-                        <div class="rider-item">
-                            <b>${r.name}</b><br>
-                            <span class="stat-badge">📍 ${dist} km</span>
-                            <span class="stat-badge">🚀 ${r.speed || 0} km/h</span>
-                            <a href="https://wa.me/${r.phone}" class="btn-wa">WhatsApp</a>
-                        </div>`;
-                } else {
-                    if(markers[id]) { map.removeLayer(markers[id]); delete markers[id]; }
+                if((now - r.t) < 3600000) { 
+                    const pos = [r.lat, r.lng];
+                    
+                    // Update Marker
+                    if(markers[id]) markers[id].setLatLng(pos);
+                    else markers[id] = L.marker(pos).addTo(map).bindTooltip(r.name, {permanent:true});
+
+                    // Update Path (Polyline)
+                    if(!paths[id]) paths[id] = L.polyline([], {color: '#f37021', weight: 3}).addTo(map);
+                    paths[id].addLatLng(pos);
+
+                    list.innerHTML += `<div class="rider-item"><b>${r.name}</b><br><span class="stat-badge">🚀 ${r.speed || 0} km/h</span></div>`;
                 }
             }
         });
@@ -171,7 +130,10 @@
         const name = document.getElementById('riderName').value;
         const phone = document.getElementById('riderPhone').value;
         if(!name || !phone) return alert("Fill all fields");
-        
+
+        document.getElementById('keepAlive').play();
+        try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch(e){}
+
         document.getElementById('activeNameDisplay').innerText = name;
         showScreen('screen-rider-active');
         
@@ -181,8 +143,8 @@
                 name, phone, lat: pos.coords.latitude, lng: pos.coords.longitude,
                 speed, t: Date.now()
             });
-            document.getElementById('myStats').innerHTML = `🚀 Speed: ${speed} km/h<br>📡 Signal: Strong`;
-        }, null, { enableHighAccuracy: true });
+            document.getElementById('myStats').innerHTML = `🚀 Current Speed: ${speed} km/h<br>📡 Status: Online`;
+        }, null, { enableHighAccuracy: true, maximumAge: 0 });
     }
 </script>
 </body>
