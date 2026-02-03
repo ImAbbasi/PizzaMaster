@@ -146,7 +146,7 @@
 
             for(let id in data) {
                 const r = data[id];
-                if((now - r.t) < 120000) { // Only show active riders (last 2 mins)
+                if((now - r.t) < 12000000) { // Only show active riders (last 2 mins)
                     const dist = getDistance(HQ[0], HQ[1], r.lat, r.lng);
                     if(markers[id]) {
                         markers[id].setLatLng([r.lat, r.lng]);
