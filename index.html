@@ -16,18 +16,18 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 
     <style>
-        :root { --primary: #111827; --accent: #f37021; --success: #22c55e; }
+        :root { --primary: #111827; --accent: #f37021; --success: #22c55e; --error: #ef4444; }
         body, html { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; height: 100%; background: #f3f4f6; overflow: hidden; }
         header { background: var(--primary); color: white; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid var(--accent); z-index: 2000; position: relative; }
         .screen { display: none; height: calc(100vh - 60px); width: 100vw; position: relative; }
         .active { display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .card { background: white; padding: 25px; border-radius: 20px; width: 85%; max-width: 350px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
         input { width: 100%; padding: 15px; border: 2px solid #d1d5db; border-radius: 12px; margin-top: 12px; font-size: 16px; box-sizing: border-box; }
-        .btn { width: 100%; padding: 16px; border-radius: 50px; border: none; font-weight: bold; font-size: 16px; margin-top: 20px; cursor: pointer; transition: 0.3s; }
+        .btn { width: 100%; padding: 16px; border-radius: 50px; border: none; font-weight: bold; font-size: 16px; margin-top: 20px; cursor: pointer; }
         .btn-primary { background: var(--accent); color: white; }
         #map { height: 100%; width: 100%; z-index: 1; }
-        #admin-panel { position: absolute; top: 10px; left: 10px; z-index: 1000; background: rgba(255,255,255,0.95); padding: 15px; border-radius: 15px; width: 200px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); font-size: 12px; }
-        .rider-item { border-bottom: 1px solid #eee; padding: 8px 0; }
+        #admin-panel { position: absolute; top: 10px; left: 10px; z-index: 1000; background: white; padding: 15px; border-radius: 15px; width: 200px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); font-size: 11px; }
+        .error-text { color: var(--error); font-weight: bold; font-size: 13px; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -42,10 +42,9 @@
 <div id="screen-start" class="screen active">
     <div class="card">
         <h2>Rider Login</h2>
-        <input type="text" id="riderName" placeholder="Rider Name">
-        <input type="tel" id="riderPhone" placeholder="WhatsApp Number">
+        <input type="text" id="riderName" placeholder="Enter Your Name">
         <button class="btn btn-primary" onclick="startTracking()">START SHIFT</button>
-        <button onclick="showScreen('screen-admin-login')" style="margin-top:20px; background:none; border:none; color:#6b7280; text-decoration:underline;">Admin Panel</button>
+        <button onclick="showScreen('screen-admin-login')" style="margin-top:20px; background:none; border:none; color:#6b7280; text-decoration:underline;">Admin Portal</button>
     </div>
 </div>
 
@@ -54,7 +53,7 @@
         <h3>Admin Access</h3>
         <input type="password" id="adminPass" placeholder="Password">
         <button class="btn btn-primary" onclick="adminAuth()">VERIFY</button>
-        <button onclick="showScreen('screen-start')" style="margin-top:15px; background:none; border:none; color:#999;">Back</button>
+        <button onclick="showScreen('screen-start')" style="margin-top:15px; border:none; background:none; color:#999;">Back</button>
     </div>
 </div>
 
@@ -62,8 +61,11 @@
     <div class="card">
         <h1 id="activeNameDisplay"></h1>
         <div style="font-size: 60px; margin: 10px;">📡</div>
-        <p><b style="color: var(--success);">TRACKING LIVE</b></p>
-        <div id="myStats" style="font-size: 14px; text-align: left; background: #fff7ed; padding: 15px; border-radius: 12px;">Waiting for GPS...</div>
+        <p><b id="statusTitle" style="color: var(--success);">INITIALIZING...</b></p>
+        <div id="myStats" style="font-size: 14px; text-align: left; background: #fff7ed; padding: 15px; border-radius: 12px; min-height: 60px;">
+            Connecting to satellites...
+        </div>
+        <button id="retryBtn" onclick="startTracking()" class="btn" style="display:none; background:var(--primary); color:white;">RETRY GPS</button>
         <button onclick="location.reload()" class="btn" style="background:#fee2e2; color:#b91c1c;">END SHIFT</button>
     </div>
 </div>
@@ -71,8 +73,7 @@
 <div id="screen-admin-map" class="screen" style="display:none;">
     <div id="admin-panel">
         <b style="color:var(--accent);">FLEET MONITOR</b><hr>
-        <div id="rider-list">No riders online...</div>
-        <button class="btn" style="background:var(--primary); color:white; padding:8px; font-size:11px;" onclick="location.reload()">LOGOUT</button>
+        <div id="rider-list">Locating riders...</div>
     </div>
     <div id="map"></div>
 </div>
@@ -80,7 +81,6 @@
 <audio id="keepAlive" loop playsinline src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA=="></audio>
 
 <script>
-    // 🛡️ PWA Service Worker Registration
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/PizzaMaster/sw.js', { scope: '/PizzaMaster/' });
     }
@@ -89,7 +89,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const HQ = [29.5298, 71.6319]; 
-    let map, markers = {}, paths = {}, wakeLock = null;
+    let map, markers = {}, paths = {}, wakeLock = null, watchID = null;
 
     function showScreen(id) {
         document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
@@ -113,19 +113,15 @@
             const data = snap.val();
             const list = document.getElementById('rider-list');
             list.innerHTML = '';
-            const now = Date.now();
-            
             for(let id in data) {
                 const r = data[id];
-                if((now - r.t) < 600000) { // 10 Min Timeout
+                if((Date.now() - r.t) < 600000) {
                     const pos = [r.lat, r.lng];
                     if(markers[id]) markers[id].setLatLng(pos);
                     else markers[id] = L.marker(pos).addTo(map).bindTooltip(r.name, {permanent:true});
-
                     if(!paths[id]) paths[id] = L.polyline([], {color: '#f37021', weight: 4}).addTo(map);
                     paths[id].addLatLng(pos);
-
-                    list.innerHTML += `<div class="rider-item"><b>${r.name}</b><br>🚀 ${r.speed || 0} km/h</div>`;
+                    list.innerHTML += `<div style="padding:5px 0; border-bottom:1px solid #eee;"><b>${r.name}</b>: ${r.speed || 0} km/h</div>`;
                 }
             }
         });
@@ -133,22 +129,48 @@
 
     async function startTracking() {
         const name = document.getElementById('riderName').value;
-        if(!name) return alert("Enter Name");
-        
+        if(!name) return alert("Please enter your name");
+
+        showScreen('screen-rider-active');
+        document.getElementById('activeNameDisplay').innerText = name;
+        document.getElementById('retryBtn').style.display = 'none';
+
+        // Keep CPU Awake
         document.getElementById('keepAlive').play();
         try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch(e){}
 
-        document.getElementById('activeNameDisplay').innerText = name;
-        showScreen('screen-rider-active');
-        
-        navigator.geolocation.watchPosition(pos => {
+        if (watchID) navigator.geolocation.clearWatch(watchID);
+
+        watchID = navigator.geolocation.watchPosition(pos => {
             const speed = pos.coords.speed ? Math.floor(pos.coords.speed * 3.6) : 0;
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+
             db.ref('riders/' + name.replace(/\s/g,'_')).set({
-                name, lat: pos.coords.latitude, lng: pos.coords.longitude,
-                speed, t: Date.now()
+                name, lat, lng, speed, t: Date.now()
             });
-            document.getElementById('myStats').innerHTML = `🚀 Speed: ${speed} km/h<br>📡 GPS Active`;
-        }, null, { enableHighAccuracy: true });
+
+            document.getElementById('statusTitle').style.color = "var(--success)";
+            document.getElementById('statusTitle').innerText = "TRACKING LIVE";
+            document.getElementById('myStats').innerHTML = `🚀 Speed: ${speed} km/h<br>📡 Accuracy: ${Math.round(pos.coords.accuracy)}m<br>📍 GPS: Online`;
+        }, (err) => {
+            document.getElementById('statusTitle').style.color = "var(--error)";
+            document.getElementById('statusTitle').innerText = "GPS ERROR";
+            document.getElementById('retryBtn').style.display = 'block';
+            
+            let errorMsg = "";
+            switch(err.code) {
+                case 1: errorMsg = "Permission Denied. Please allow location in your browser settings."; break;
+                case 2: errorMsg = "Position Unavailable. Move to an open area (outdoor)."; break;
+                case 3: errorMsg = "GPS Timeout. Still trying to find your signal..."; break;
+                default: errorMsg = "An unknown error occurred."; break;
+            }
+            document.getElementById('myStats').innerHTML = `<span class="error-text">${errorMsg}</span>`;
+        }, { 
+            enableHighAccuracy: true, 
+            maximumAge: 0, 
+            timeout: 15000 
+        });
     }
 </script>
 </body>
