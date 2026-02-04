@@ -9,6 +9,7 @@
     <meta name="theme-color" content="#f37021">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/ImAbbasi/my-assets/main/logo.png">
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -16,90 +17,154 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 
     <style>
-        :root { --primary: #111827; --accent: #f37021; --success: #22c55e; }
+        :root { --primary: #111827; --accent: #f37021; --success: #22c55e; --error: #ef4444; }
         body, html { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; height: 100%; background: #f3f4f6; overflow: hidden; }
-        header { background: var(--primary); color: white; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid var(--accent); }
+        
+        header { 
+            background: var(--primary); color: white; padding: 12px 15px; 
+            display: flex; justify-content: space-between; align-items: center; 
+            border-bottom: 3px solid var(--accent); z-index: 2000; position: relative; 
+        }
+
         .screen { display: none; height: calc(100vh - 60px); width: 100vw; position: relative; }
         .active { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        
         .card { background: white; padding: 25px; border-radius: 20px; width: 85%; max-width: 350px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        input { width: 100%; padding: 15px; border: 2px solid #d1d5db; border-radius: 12px; margin-top: 12px; font-size: 16px; box-sizing: border-box; outline: none; }
+        
         .btn { width: 100%; padding: 16px; border-radius: 50px; border: none; font-weight: bold; font-size: 16px; margin-top: 20px; cursor: pointer; }
         .btn-primary { background: var(--accent); color: white; }
-        #map { height: 100%; width: 100%; }
-        #admin-panel { position: absolute; top: 10px; left: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 10px; width: 180px; font-size: 11px; }
+
+        /* Map Fixes */
+        #map { height: 100%; width: 100%; z-index: 1; }
+        #admin-panel { 
+            position: absolute; top: 10px; left: 10px; z-index: 1000; 
+            background: rgba(255,255,255,0.95); padding: 15px; border-radius: 15px; 
+            width: 200px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); font-size: 12px;
+            max-height: 40vh; overflow-y: auto;
+        }
+
+        .leaflet-tooltip {
+            background: white !important;
+            border: 2px solid var(--accent) !important;
+            font-weight: bold !important;
+            color: var(--primary) !important;
+        }
+        .hq-label { border: 2px solid #ff0000 !important; color: #ff0000 !important; }
+        .rider-item { border-bottom: 1px solid #eee; padding: 8px 0; }
     </style>
 </head>
 <body>
 
 <header>
-    <div style="font-weight:bold;">PIZZA <span style="color:var(--accent)">MASTER</span></div>
+    <div style="display: flex; align-items: center;">
+        <img src="https://raw.githubusercontent.com/ImAbbasi/my-assets/main/logo.png" style="height:30px; margin-right:10px;">
+        <div style="font-weight:bold;">PIZZA <span style="color:var(--accent)">MASTER</span></div>
+    </div>
 </header>
 
 <audio id="bgAudio" loop playsinline src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA=="></audio>
 
 <div id="screen-start" class="screen active">
     <div class="card">
-        <h2>Rider Portal</h2>
-        <input type="text" id="riderName" placeholder="Name" style="width:100%; padding:12px; margin-top:10px; border-radius:10px; border:1px solid #ccc;">
-        <button class="btn btn-primary" onclick="startTracking()">GO ONLINE</button>
-        <button onclick="showScreen('screen-admin-login')" style="margin-top:15px; background:none; border:none; color:#6b7280;">Admin Login</button>
+        <h2>Rider Login</h2>
+        <input type="text" id="riderName" placeholder="Full Name">
+        <button class="btn btn-primary" onclick="startTracking()">START SHIFT</button>
+        <button onclick="showScreen('screen-admin-login')" style="margin-top:20px; background:none; border:none; color:#6b7280; text-decoration:underline;">Admin Portal</button>
     </div>
 </div>
 
 <div id="screen-admin-login" class="screen">
     <div class="card">
         <h3>Admin Access</h3>
-        <input type="password" id="adminPass" placeholder="Password" style="width:100%; padding:12px; margin-top:10px;">
-        <button class="btn btn-primary" onclick="adminAuth()">LOGIN</button>
+        <input type="password" id="adminPass" placeholder="Password">
+        <button class="btn btn-primary" onclick="adminAuth()">VERIFY</button>
+        <button onclick="showScreen('screen-start')" style="margin-top:15px; border:none; background:none; color:#999;">Back</button>
     </div>
 </div>
 
 <div id="screen-rider-active" class="screen">
     <div class="card">
         <h1 id="activeNameDisplay"></h1>
-        <div style="font-size: 50px;">🛵</div>
-        <p><b style="color:var(--success)">TRACKING IN BACKGROUND</b></p>
-        <p style="font-size:12px; color:#666;">Keep this tab open. You can lock your screen now.</p>
-        <div id="myStats" style="font-size: 13px; background:#f9f9f9; padding:10px; border-radius:10px;">Waiting...</div>
-        <button onclick="location.reload()" class="btn" style="background:#fee2e2; color:#b91c1c;">OFF DUTY</button>
+        <div style="font-size: 60px; margin: 10px;">📡</div>
+        <p><b id="statusTitle" style="color: var(--success);">TRACKING LIVE</b></p>
+        <div id="myStats" style="font-size: 14px; text-align: left; background: #fff7ed; padding: 15px; border-radius: 12px;">Initializing GPS...</div>
+        <button onclick="location.reload()" class="btn" style="background:#fee2e2; color:#b91c1c;">END SHIFT</button>
     </div>
 </div>
 
-<div id="screen-admin-map" class="screen">
-    <div id="admin-panel"><b>FLEET</b><hr><div id="rider-list"></div></div>
+<div id="screen-admin-map" class="screen" style="display:none;">
+    <div id="admin-panel">
+        <b style="color:var(--accent);">FLEET MONITOR</b><hr>
+        <div id="rider-list">Locating...</div>
+        <button class="btn" style="background:var(--primary); color:white; padding:5px; font-size:10px; height:auto; margin-top:10px;" onclick="location.reload()">LOGOUT</button>
+    </div>
     <div id="map"></div>
 </div>
 
 <script>
+    // 1. Service Worker Registration
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/PizzaMaster/sw.js', { scope: '/PizzaMaster/' });
+    }
+
+    // 2. Firebase Config
     const firebaseConfig = { databaseURL: "https://ovenx-tracking-default-rtdb.asia-southeast1.firebasedatabase.app/" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+    
+    // 3. Variables
     const HQ = [29.5298, 71.6319]; 
-    let map, markers = {}, wakeLock = null;
+    let map, markers = {}, paths = {}, wakeLock = null;
 
     function showScreen(id) {
         document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
-        document.getElementById(id).style.display = (id === 'screen-admin-map') ? 'block' : 'flex';
+        const target = document.getElementById(id);
+        target.style.display = (id === 'screen-admin-map') ? 'block' : 'flex';
         if(id === 'screen-admin-map') setTimeout(initAdminMap, 300);
     }
 
     function adminAuth() {
         if(document.getElementById('adminPass').value === '1234') showScreen('screen-admin-map');
+        else alert("Wrong Password");
     }
 
     function initAdminMap() {
-        if(map) return;
-        map = L.map('map').setView(HQ, 14);
+        if(map) { map.invalidateSize(); return; }
+        map = L.map('map', { zoomControl: true }).setView(HQ, 15);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+        // Custom HQ Icon
+        const hqIcon = L.icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41], iconAnchor: [12, 41], shadowSize: [41, 41]
+        });
+
+        L.marker(HQ, {icon: hqIcon}).addTo(map)
+            .bindTooltip("<b>HQ: Pizza Master</b>", { permanent: true, direction: 'top', className: 'hq-label' });
+
         db.ref('riders').on('value', snap => {
             const data = snap.val();
             const list = document.getElementById('rider-list');
             list.innerHTML = '';
+            
             for(let id in data) {
                 const r = data[id];
-                if(Date.now() - r.t < 300000) {
-                    if(markers[id]) markers[id].setLatLng([r.lat, r.lng]);
-                    else markers[id] = L.marker([r.lat, r.lng]).addTo(map).bindTooltip(r.name, {permanent:true});
-                    list.innerHTML += `<div>${r.name}: ${r.speed}km/h</div>`;
+                if((Date.now() - r.t) < 600000) { // Active in last 10 mins
+                    const pos = [r.lat, r.lng];
+                    
+                    if(markers[id]) {
+                        markers[id].setLatLng(pos);
+                    } else {
+                        markers[id] = L.marker(pos).addTo(map)
+                            .bindTooltip(r.name, { permanent: true, direction: 'right' });
+                    }
+
+                    if(!paths[id]) paths[id] = L.polyline([], {color: '#f37021', weight: 4}).addTo(map);
+                    paths[id].addLatLng(pos);
+
+                    list.innerHTML += `<div class="rider-item"><b>${r.name}</b>: ${r.speed || 0} km/h</div>`;
                 }
             }
         });
@@ -107,33 +172,26 @@
 
     async function startTracking() {
         const name = document.getElementById('riderName').value;
-        if(!name) return;
+        if(!name) return alert("Enter Name");
 
-        // 1. Start Silent Audio (Tricks OS to keep the tab active)
-        const audio = document.getElementById('bgAudio');
-        audio.play().catch(e => console.log("Audio play failed, needs user click"));
-
-        // 2. Request WakeLock (Prevents screen from sleeping if possible)
+        document.getElementById('bgAudio').play();
         try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch(e){}
 
         showScreen('screen-rider-active');
         document.getElementById('activeNameDisplay').innerText = name;
 
-        // 3. High Accuracy Watch
         navigator.geolocation.watchPosition(pos => {
             const speed = pos.coords.speed ? Math.floor(pos.coords.speed * 3.6) : 0;
             db.ref('riders/' + name.replace(/\s/g,'_')).set({
                 name, lat: pos.coords.latitude, lng: pos.coords.longitude,
                 speed, t: Date.now()
             });
-            document.getElementById('myStats').innerHTML = `Speed: ${speed} km/h<br>Acc: ${Math.round(pos.coords.accuracy)}m`;
+            document.getElementById('myStats').innerHTML = `🚀 Speed: ${speed} km/h<br>📡 Accuracy: ${Math.round(pos.coords.accuracy)}m`;
         }, (err) => {
-            console.error(err);
-        }, { 
-            enableHighAccuracy: true, 
-            maximumAge: 0, 
-            timeout: 10000 
-        });
+            document.getElementById('statusTitle').innerText = "GPS ERROR";
+            document.getElementById('statusTitle').style.color = "var(--error)";
+            document.getElementById('myStats').innerHTML = "Please enable high-accuracy GPS and step outside.";
+        }, { enableHighAccuracy: true, maximumAge: 0 });
     }
 </script>
 </body>
