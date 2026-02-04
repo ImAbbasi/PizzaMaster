@@ -1,0 +1,17 @@
+{
+  "name": "Pizza Master PRO",
+  "short_name": "PizzaMaster",
+  "description": "Real-time Rider Tracking for Pizza Master",
+  "start_url": "/PizzaMaster/",
+  "display": "standalone",
+  "background_color": "#111827",
+  "theme_color": "#f37021",
+  "icons": [
+    {
+      "src": "https://raw.githubusercontent.com/ImAbbasi/my-assets/main/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
